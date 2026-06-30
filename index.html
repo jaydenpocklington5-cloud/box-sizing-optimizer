@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📦 Box-Sizing Optimizer</title>
+<style>
+  :root{
+    --bg:#0f1320; --panel:#181d2e; --panel2:#1f263b; --ink:#e8ecf6; --muted:#9aa4bd;
+    --accent:#5b8cff; --accent2:#3a6df0; --green:#37d399; --green-bg:#123026;
+    --warn:#ffd166; --warn-bg:#332a12; --border:#2a3350; --chip:#243056;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.5;}
+  header{background:#141a2b;
+         border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  header h1{font-size:1.15rem;margin:0;}
+  header .tag{color:var(--muted);font-size:.85rem;}
+  header .spacer{flex:1;}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 460px;gap:18px;padding:18px 24px;align-items:start;}
+  @media(max-width:1000px){.layout{grid-template-columns:1fr;}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:18px;}
+  .card h2{margin:0 0 12px;font-size:1.02rem;}
+  .card h2 small{color:var(--muted);font-weight:400;font-size:.8rem;}
+  .muted{color:var(--muted);font-size:.86rem;}
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .kpi{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px;}
+  .kpi .v{font-size:1.4rem;font-weight:700;}
+  .kpi .l{color:var(--muted);font-size:.78rem;margin-top:2px;}
+  .rec{background:var(--green-bg);border:1px solid var(--green);}
+  .rec .v{color:var(--green);}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .chip{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:6px 12px;font-size:.82rem;
+        display:flex;flex-direction:column;line-height:1.2;}
+  .chip small{color:var(--muted);}
+  table{width:100%;border-collapse:collapse;font-size:.85rem;}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;}
+  tr.is-rec{background:var(--green-bg);}
+  tr.is-active{background:#1d2742;}
+  select,input[type=number]{background:var(--panel2);color:var(--ink);border:1px solid var(--border);
+        border-radius:8px;padding:8px 10px;font-size:.92rem;}
+  label.ctrl{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+  .alert{border-radius:10px;padding:10px 12px;font-size:.85rem;margin-bottom:12px;}
+  .alert.warn{background:var(--warn-bg);color:var(--warn);border:1px solid #5b4a16;}
+  #viewer{width:100%;height:360px;background:radial-gradient(circle at 50% 30%, #1b2236, #11152200);
+          border:1px solid var(--border);border-radius:10px;overflow:hidden;touch-action:none;}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:.8rem;}
+  .legend span{display:flex;align-items:center;gap:6px;}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
+  .files{display:flex;flex-direction:column;gap:10px;}
+  .files label{font-size:.82rem;color:var(--muted);display:flex;flex-direction:column;gap:4px;}
+  input[type=file]{font-size:.8rem;color:var(--muted);}
+  .btn{background:var(--accent2);border:0;color:#fff;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer;font-size:.9rem;}
+  .btn:hover{background:var(--accent);}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--ink);}
+  .od{font-size:.85rem;}
+  .od b{color:var(--ink);}
+  details summary{cursor:pointer;color:var(--muted);font-size:.85rem;}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:.85em;}
+</style>
+</head>
+<body>
+<header>
+  <h1>📦 Box-Sizing Optimizer</h1>
+  <span class="tag">Right-size shipping from historic orders · runs entirely in your browser</span>
+  <span class="spacer"></span>
+  <button class="btn ghost" id="loadSample">Reload sample data</button>
+</header>
+
+<div class="layout">
+  <!-- LEFT COLUMN -->
+  <div>
+    <div id="warnings"></div>
+
+    <div class="card">
+      <h2>Headline</h2>
+      <div class="kpis" id="kpis"></div>
+    </div>
+
+    <div class="card rec" id="recCard">
+      <h2>✅ Our recommendation — minimum number of box sizes</h2>
+      <div class="od" id="recText"></div>
+      <div class="chips" id="recChips"></div>
+    </div>
+
+    <div class="card">
+      <h2>Override — desired number of box sizes</h2>
+      <div class="row">
+        <label class="ctrl">Stock this many box sizes
+          <select id="kSelect"></select>
+        </label>
+        <div class="od" id="kSummary" style="flex:1;min-width:220px;"></div>
+      </div>
+      <div class="chips" id="kChips" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Cost vs. number of boxes <small>trade-off curve</small></h2>
+      <table id="curveTable">
+        <thead><tr><th>#</th><th>Box sizes</th><th>Orders covered</th><th>Est. total cost</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Box usage <small>under current selection</small></h2>
+      <table id="usageTable">
+        <thead><tr><th>Box</th><th>Dims (cm)</th><th>Orders</th><th>Avg fill</th><th>Cost</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div>
+    <div class="card">
+      <h2>🧊 Order viewer <small>3D box + items</small></h2>
+      <div class="row" style="margin-bottom:10px;">
+        <label class="ctrl" style="flex:1;">Order
+          <select id="orderSelect"></select>
+        </label>
+      </div>
+      <div id="viewer"></div>
+      <div class="legend" id="legend"></div>
+      <div class="od" id="orderDetail" style="margin-top:10px;"></div>
+      <p class="muted" style="margin:8px 0 0;">Drag to rotate · scroll to zoom. Layout is illustrative
+        (volumetric fit); the box is shown transparent.</p>
+    </div>
+
+    <div class="card">
+      <h2>🧪 Build &amp; test an order <small>sandbox</small></h2>
+      <p class="muted" style="margin-top:0;">Throw together a custom order and see which box it needs.</p>
+      <div class="row" style="align-items:flex-end;">
+        <label class="ctrl" style="flex:1;min-width:160px;">Add item
+          <select id="sbItem"></select>
+        </label>
+        <label class="ctrl" style="width:70px;">Qty
+          <input type="number" id="sbQty" value="1" min="1" max="50" style="width:64px;">
+        </label>
+        <button class="btn" id="sbAdd">Add</button>
+      </div>
+      <div class="row" style="margin-top:10px;gap:8px;">
+        <button class="btn" id="sbRandom">🎲 Random order</button>
+        <button class="btn ghost" id="sbClear">Clear</button>
+      </div>
+      <div id="sbList" style="margin-top:12px;"></div>
+      <button class="btn" id="sbPack" style="margin-top:12px;width:100%;">📦 Pack &amp; view in 3D ↑</button>
+      <div class="od" id="sbResult" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Upload your data <small>CSV</small></h2>
+      <div class="files">
+        <label>Orders (Shopify export or <code>order_id,sku,quantity</code>)
+          <input type="file" id="ordersFile" accept=".csv">
+        </label>
+        <label>Product catalogue <code>sku,name,length,width,height,weight</code>
+          <input type="file" id="productsFile" accept=".csv">
+        </label>
+        <label>Box catalogue <code>name,length,width,height,cost,max_weight</code>
+          <input type="file" id="boxesFile" accept=".csv">
+        </label>
+        <div class="row">
+          <label class="ctrl">Length unit
+            <select id="lenUnit"><option>cm</option><option>in</option><option>mm</option></select></label>
+          <label class="ctrl">Weight unit
+            <select id="wtUnit"><option>kg</option><option>lb</option><option>g</option><option>oz</option></select></label>
+          <label class="ctrl">Currency
+            <input type="text" id="currency" value="$" maxlength="3" style="width:70px"></label>
+        </div>
+        <button class="btn" id="runUpload">Analyze uploaded files</button>
+        <p class="muted">No catalogue? Sizes are estimated from weight. No box file? Built-in default boxes are used.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Settings</h2>
+      <div class="row">
+        <label class="ctrl" title="Usable fraction of box volume">Fill limit
+          <input type="number" id="fillLimit" value="0.80" step="0.05" min="0.1" max="1" style="width:90px"></label>
+        <label class="ctrl" title="Courier cost per billable kg">Rate / kg
+          <input type="number" id="ratePerKg" value="8" step="0.5" min="0" style="width:90px"></label>
+        <label class="ctrl" title="Dimensional weight divisor cm³/kg">Dim divisor
+          <input type="number" id="dimDivisor" value="5000" step="100" min="1" style="width:100px"></label>
+      </div>
+      <button class="btn ghost" id="applySettings" style="margin-top:10px;">Apply settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- Three.js loaded from CDN (works on hosted HTTPS like GitHub Pages). -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const OrbitControls = THREE.OrbitControls;
+
+/* =======================================================================
+   Sample data (CSV) — auto-loaded so the app works the moment you open it.
+   ======================================================================= */
+const SAMPLE_ORDERS = `Name,Lineitem quantity,Lineitem name,Lineitem sku
+#1001,1,Classic Tee - M,TEE-CLA-M
+#1001,2,Cotton Socks,SOCK-CTN
+#1002,1,Hooded Sweatshirt - L,HOOD-L
+#1003,1,Ceramic Mug,MUG-CER
+#1003,1,Classic Tee - M,TEE-CLA-M
+#1004,3,Cotton Socks,SOCK-CTN
+#1005,1,Yoga Mat,MAT-YOGA
+#1006,1,Classic Tee - M,TEE-CLA-M
+#1007,2,Hooded Sweatshirt - L,HOOD-L
+#1008,2,Ceramic Mug,MUG-CER
+#1009,1,Coffee Table Book,BOOK-COF
+#1010,4,Cotton Socks,SOCK-CTN
+#1011,1,Classic Tee - M,TEE-CLA-M
+#1012,1,Hooded Sweatshirt - L,HOOD-L
+#1012,1,Ceramic Mug,MUG-CER
+#1013,1,Coffee Table Book,BOOK-COF
+#1014,1,Yoga Mat,MAT-YOGA
+#1015,2,Classic Tee - M,TEE-CLA-M
+#1016,1,Hooded Sweatshirt - L,HOOD-L
+#1016,2,Ceramic Mug,MUG-CER
+#1016,1,Classic Tee - M,TEE-CLA-M`;
+
+const SAMPLE_PRODUCTS = `sku,name,length,width,height,weight
+TEE-CLA-M,Classic Tee - M,25,20,3,0.2
+SOCK-CTN,Cotton Socks,12,8,3,0.1
+HOOD-L,Hooded Sweatshirt - L,35,28,6,0.6
+MUG-CER,Ceramic Mug,12,9,11,0.45
+MAT-YOGA,Yoga Mat,61,15,15,1.2
+BOOK-COF,Coffee Table Book,30,26,4,1.5`;
+
+const SAMPLE_BOXES = `name,length,width,height,cost,max_weight
+Flat Mailer,28,22,4,0.30,2
+Small Cube,20,20,12,0.55,5
+Medium Box,35,28,18,0.85,10
+Long Box,65,18,18,0.95,8
+Large Box,50,40,30,1.70,20`;
+
+const DEFAULT_BOXES = SAMPLE_BOXES; // used if user uploads orders but no box file
+
+/* =======================================================================
+   Units & CSV parsing
+   ======================================================================= */
+const LEN_TO_CM = {cm:1, mm:0.1, m:100, in:2.54, inch:2.54, ft:30.48};
+const WT_TO_KG  = {kg:1, g:0.001, lb:0.45359237, lbs:0.45359237, oz:0.0283495231};
+const DENSITY = 250; // kg/m³ for weight-based estimation
+
+function parseCSV(text){
+  const rows=[]; let i=0, field='', row=[], inQ=false;
+  text = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  while(i<text.length){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inQ=false; }
+      else field+=c;
+    } else {
+      if(c==='"') inQ=true;
+      else if(c===','){ row.push(field); field=''; }
+      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else field+=c;
+    }
+    i++;
+  }
+  if(field.length||row.length){ row.push(field); rows.push(row); }
+  if(!rows.length) return [];
+  const headers = rows[0].map(h=>h.trim());
+  return rows.slice(1).filter(r=>r.some(c=>c.trim()!=='')).map(r=>{
+    const o={}; headers.forEach((h,idx)=>o[h]=(r[idx]??'').trim()); return o;
+  });
+}
+const norm = s => s.trim().toLowerCase().replace(/[_-]/g,' ');
+function col(headers, ...aliases){
+  const map={}; headers.forEach(h=>map[norm(h)]=h);
+  for(const a of aliases) if(a in map) return map[a];
+  return null;
+}
+const num = v => { const n=parseFloat(v); return isNaN(n)?null:n; };
+
+/* =======================================================================
+   Domain build
+   ======================================================================= */
+function buildCatalog(csv, lenUnit, wtUnit){
+  if(!csv) return {};
+  const rows = parseCSV(csv); if(!rows.length) return {};
+  const H = Object.keys(rows[0]);
+  const skuC=col(H,'sku','variant sku','product sku','id');
+  const nameC=col(H,'name','product','title','lineitem name');
+  const lC=col(H,'length','l','depth'), wC=col(H,'width','w'), hC=col(H,'height','h');
+  const wtC=col(H,'weight','grams','variant grams');
+  if(!skuC) throw new Error("Product catalogue needs a 'sku' column.");
+  const lconv=LEN_TO_CM[lenUnit]||1;
+  const grams = wtC && (norm(wtC)==='grams'||norm(wtC)==='variant grams');
+  const wconv = grams?0.001:(WT_TO_KG[wtUnit]||1);
+  const cat={};
+  for(const r of rows){
+    const sku=(r[skuC]||'').trim(); if(!sku) continue;
+    cat[sku]={sku, name:(nameC&&r[nameC])?r[nameC]:sku,
+      l:(num(r[lC])||0)*lconv, w:(num(r[wC])||0)*lconv, h:(num(r[hC])||0)*lconv,
+      weight:(num(r[wtC])||0)*wconv, estimated:false};
+  }
+  return cat;
+}
+
+function estimateItem(sku,name,weight){
+  let side;
+  if(weight>0){ const vcm3=(weight/DENSITY)*1e6; side=Math.cbrt(vcm3); }
+  else side=5;
+  return {sku,name,l:side,w:side,h:side,weight,estimated:true};
+}
+
+function buildOrders(csv, catalog){
+  const rows=parseCSV(csv);
+  if(!rows.length) throw new Error('Orders file is empty.');
+  const H=Object.keys(rows[0]);
+  const orderC=col(H,'order id','order','name','order number','order name');
+  const skuC=col(H,'lineitem sku','sku','variant sku','product sku');
+  const qtyC=col(H,'lineitem quantity','quantity','qty');
+  const nameC=col(H,'lineitem name','name','product','title');
+  if(!skuC) throw new Error("Orders file needs a SKU column ('Lineitem sku' or 'sku').");
+  if(!orderC) throw new Error("Orders file needs an order id column ('Name' or 'order_id').");
+  const orders={}, missing=new Set(), estimated=new Set();
+  let current='';
+  for(const r of rows){
+    const ro=(r[orderC]||'').trim(); if(ro) current=ro;
+    const sku=(r[skuC]||'').trim(); if(!sku||!current) continue;
+    const qty=Math.max(1, Math.round(num(r[qtyC])||1));
+    const lname=(nameC&&r[nameC])?r[nameC]:sku;
+    let item=catalog[sku];
+    if(!item){ missing.add(sku); item=estimateItem(sku,lname,0); }
+    else if((item.l*item.w*item.h)<=0){ estimated.add(sku); item=estimateItem(sku,item.name||lname,item.weight); }
+    const ord=orders[current]||(orders[current]={id:current,lines:[]});
+    const ex=ord.lines.find(l=>l.item.sku===sku);
+    if(ex) ex.qty+=qty; else ord.lines.push({item,qty});
+  }
+  const warnings=[];
+  if(missing.size) warnings.push(`${missing.size} SKU(s) not in catalogue were estimated from weight (e.g. ${[...missing].slice(0,4).join(', ')}).`);
+  if(estimated.size) warnings.push(`${estimated.size} catalogued SKU(s) had no dimensions and were estimated (e.g. ${[...estimated].slice(0,4).join(', ')}).`);
+  return {orders:Object.values(orders), warnings};
+}
+
+function buildBoxes(csv, lenUnit, wtUnit){
+  const rows=parseCSV(csv);
+  const H=Object.keys(rows[0]);
+  const nameC=col(H,'name','box','box name','type');
+  const lC=col(H,'length','l','depth'), wC=col(H,'width','w'), hC=col(H,'height','h');
+  const costC=col(H,'cost','price','unit cost'), maxC=col(H,'max weight','weight limit','rating');
+  if(!(lC&&wC&&hC)) throw new Error('Box catalogue needs length, width and height columns.');
+  const lconv=LEN_TO_CM[lenUnit]||1, wconv=WT_TO_KG[wtUnit]||1;
+  const boxes=[];
+  rows.forEach((r,idx)=>{
+    const l=(num(r[lC])||0)*lconv, w=(num(r[wC])||0)*lconv, h=(num(r[hC])||0)*lconv;
+    if(l<=0||w<=0||h<=0) return;
+    boxes.push({name:(nameC&&r[nameC])?r[nameC]:`Box ${idx+1}`, l,w,h,
+      cost:(num(r[costC])||0), maxWeight: maxC? (num(r[maxC])!=null? num(r[maxC])*wconv : null):null});
+  });
+  if(!boxes.length) throw new Error('No valid boxes found.');
+  return boxes;
+}
+
+/* =======================================================================
+   Packing feasibility + cost (mirrors the Python engine)
+   ======================================================================= */
+const sortDims = o => [o.l,o.w,o.h].sort((a,b)=>a-b);
+const volume = o => o.l*o.w*o.h;
+function itemFits(item, box){
+  const a=sortDims(item), b=sortDims(box);
+  return a[0]<=b[0] && a[1]<=b[1] && a[2]<=b[2];
+}
+function orderVolume(o){ return o.lines.reduce((s,l)=>s+volume(l.item)*l.qty,0); }
+function orderWeight(o){ return o.lines.reduce((s,l)=>s+l.item.weight*l.qty,0); }
+function orderUnits(o){ return o.lines.reduce((s,l)=>s+l.qty,0); }
+function orderFits(o, box, fillLimit){
+  for(const l of o.lines) if(!itemFits(l.item, box)) return false;
+  if(orderVolume(o) > volume(box)*fillLimit) return false;
+  if(box.maxWeight!=null && orderWeight(o) > box.maxWeight) return false;
+  return true;
+}
+function costForBox(o, box, S){
+  const dimW = S.dimDivisor>0 ? volume(box)/S.dimDivisor : 0;
+  const billable = Math.max(orderWeight(o), dimW);
+  return {cost: billable*S.ratePerKg + box.cost, billable, dimW};
+}
+function assignBox(o, boxes, S){
+  let best=null;
+  for(const box of boxes){
+    if(!orderFits(o,box,S.fillLimit)) continue;
+    const c=costForBox(o,box,S);
+    if(!best || c.cost<best.cost) best={box, ...c};
+  }
+  return best; // null => no fit
+}
+
+/* lineup evaluation: cheapest fitting box (within lineup) per order */
+function evaluate(orders, lineup, S){
+  let cost=0, covered=0; const assign={};
+  for(const o of orders){
+    const a=assignBox(o, lineup, S);
+    assign[o.id]=a;
+    if(a){ cost+=a.cost; covered++; }
+  }
+  return {cost, covered, assign};
+}
+
+/* Greedy ordering of candidate boxes: coverage first, then cost. */
+function greedyOrder(orders, boxes, S){
+  const packable = orders.filter(o=>boxes.some(b=>orderFits(o,b,S.fillLimit)));
+  const order=[]; const remaining=[...boxes];
+  while(remaining.length){
+    let bestBox=null, bestKey=null;
+    for(const box of remaining){
+      const {cost, covered}=evaluate(packable, [...order, box], S);
+      const key=[covered, -cost];
+      if(!bestKey || key[0]>bestKey[0] || (key[0]===bestKey[0] && key[1]>bestKey[1])){
+        bestKey=key; bestBox=box;
+      }
+    }
+    order.push(bestBox); remaining.splice(remaining.indexOf(bestBox),1);
+  }
+  return {order, packable};
+}
+
+function buildCurve(orders, orderedBoxes, packable, S){
+  const curve=[];
+  for(let k=1;k<=orderedBoxes.length;k++){
+    const lineup=orderedBoxes.slice(0,k);
+    const {cost, covered}=evaluate(packable, lineup, S);
+    curve.push({k, boxes:lineup, cost, covered, packableCount:packable.length});
+  }
+  return curve;
+}
+
+/* Recommendation: smallest k at full coverage where next box saves < 3%. */
+function recommend(curve){
+  if(!curve.length) return null;
+  const maxCov=Math.max(...curve.map(c=>c.covered));
+  const eligible=curve.filter(c=>c.covered===maxCov);
+  let best=eligible[0];
+  for(let i=0;i<eligible.length-1;i++){
+    const prev=eligible[i], next=eligible[i+1];
+    if(prev.cost<=0) break;
+    if((prev.cost-next.cost)/prev.cost < 0.03) break;
+    best=next;
+  }
+  return best;
+}
+
+/* =======================================================================
+   State + main analysis
+   ======================================================================= */
+let STATE = { orders:[], boxes:[], ordered:[], curve:[], rec:null, S:null,
+              currentK:null, currentLineup:[], currentAssign:{}, currency:'$' };
+
+function readSettings(){
+  return {
+    fillLimit: parseFloat(document.getElementById('fillLimit').value)||0.8,
+    ratePerKg: parseFloat(document.getElementById('ratePerKg').value)||8,
+    dimDivisor: parseFloat(document.getElementById('dimDivisor').value)||5000,
+  };
+}
+
+function analyze(ordersCSV, productsCSV, boxesCSV){
+  const lenUnit=document.getElementById('lenUnit').value;
+  const wtUnit=document.getElementById('wtUnit').value;
+  const S=readSettings();
+  STATE.currency=document.getElementById('currency').value||'$';
+  const catalog=buildCatalog(productsCSV, lenUnit, wtUnit);
+  const {orders, warnings}=buildOrders(ordersCSV, catalog);
+  const boxes=buildBoxes(boxesCSV||DEFAULT_BOXES, lenUnit, wtUnit);
+  if(!productsCSV) warnings.push('No product catalogue — all item sizes estimated from weight. Upload one for accuracy.');
+  if(!boxesCSV) warnings.push('No box catalogue uploaded — using the sample/default box set.');
+
+  const {order:ordered, packable}=greedyOrder(orders, boxes, S);
+  const curve=buildCurve(orders, ordered, packable, S);
+  const rec=recommend(curve);
+
+  // Build a catalogue of selectable items for the sandbox: catalogue products
+  // plus any item seen in the orders (so it works even without a product CSV).
+  const itemsBySku={...catalog};
+  for(const o of orders) for(const l of o.lines)
+    if(!itemsBySku[l.item.sku]) itemsBySku[l.item.sku]=l.item;
+  const items=Object.values(itemsBySku).sort((a,b)=>a.name.localeCompare(b.name));
+
+  STATE={...STATE, orders, boxes, ordered, curve, rec, S, warnings, items, itemsBySku,
+    packableCount:packable.length, unpackable: orders.length-packable.length};
+
+  selectK(rec? rec.k : Math.min(ordered.length,1), warnings);
+  populateSandbox();
+}
+
+function selectK(k, warnings){
+  k=Math.max(1, Math.min(k, STATE.ordered.length));
+  STATE.currentK=k;
+  STATE.currentLineup=STATE.ordered.slice(0,k);
+  const ev=evaluate(STATE.orders, STATE.currentLineup, STATE.S);
+  STATE.currentAssign=ev.assign;
+  render(warnings);
+}
+
+/* =======================================================================
+   Rendering
+   ======================================================================= */
+const fmt = n => (STATE.currency)+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const dims = b => `${Math.round(b.l)}×${Math.round(b.w)}×${Math.round(b.h)}`;
+
+function render(warnings){
+  const orders=STATE.orders;
+  const assigns=Object.values(STATE.currentAssign);
+  const fitted=assigns.filter(Boolean);
+  const totalCost=fitted.reduce((s,a)=>s+a.cost,0);
+  const covered=fitted.length;
+  const avgFill = fitted.length
+    ? fitted.reduce((s,a)=>{ const o=orders.find(o=>STATE.currentAssign[o.id]===a);
+        return s + Math.min(orderVolume(o)/volume(a.box),1); },0)/fitted.length : 0;
+  const totalVoid = fitted.reduce((s,a)=>{ const o=orders.find(o=>STATE.currentAssign[o.id]===a);
+        return s + Math.max(volume(a.box)-orderVolume(o),0); },0);
+
+  // warnings
+  const wEl=document.getElementById('warnings');
+  const allW=[...(warnings||STATE.warnings||[])];
+  if(STATE.unpackable) allW.push(`${STATE.unpackable} order(s) fit no box at all — they need a larger box or splitting into multiple parcels.`);
+  const uncoveredNow = orders.length - covered - STATE.unpackable;
+  if(uncoveredNow>0) allW.push(`${uncoveredNow} order(s) can't be shipped with only ${STATE.currentK} box size(s) — increase the count to cover them.`);
+  wEl.innerHTML = allW.length ? `<div class="alert warn"><b>Notes</b><ul style="margin:6px 0 0;padding-left:18px;">${allW.map(w=>`<li>${w}</li>`).join('')}</ul></div>` : '';
+
+  // KPIs
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi"><div class="v">${orders.length}</div><div class="l">Orders analysed</div></div>
+    <div class="kpi"><div class="v">${fmt(totalCost)}</div><div class="l">Est. total shipping (${STATE.currentK} box sizes)</div></div>
+    <div class="kpi"><div class="v">${Math.round(avgFill*100)}%</div><div class="l">Avg box fill</div></div>
+    <div class="kpi"><div class="v">${(totalVoid/1000).toFixed(1)} L</div><div class="l">Total void space</div></div>`;
+
+  // recommendation
+  const rec=STATE.rec;
+  if(rec){
+    document.getElementById('recText').innerHTML =
+      `Stock <b>${rec.k}</b> box size${rec.k>1?'s':''} to cover <b>${rec.covered}</b> of ${rec.packableCount} packable orders at an estimated <b>${fmt(rec.cost)}</b> total shipping cost. Extra sizes beyond this save under 3%.`;
+    document.getElementById('recChips').innerHTML = rec.boxes.map(b=>
+      `<span class="chip">${b.name}<small>${dims(b)} cm</small></span>`).join('');
+  }
+
+  // override summary + chips
+  const cur=STATE.curve.find(c=>c.k===STATE.currentK);
+  document.getElementById('kSummary').innerHTML = cur
+    ? `Covers <b>${cur.covered}</b>/${cur.packableCount} packable · est. <b>${fmt(cur.cost)}</b>`
+    : '';
+  document.getElementById('kChips').innerHTML = STATE.currentLineup.map(b=>
+    `<span class="chip">${b.name}<small>${dims(b)} cm</small></span>`).join('');
+
+  // curve table
+  document.querySelector('#curveTable tbody').innerHTML = STATE.curve.map(c=>{
+    const cls = c.k===STATE.currentK?'is-active':(rec&&c.k===rec.k?'is-rec':'');
+    const tag = (rec&&c.k===rec.k)?'★ recommended':(c.k===STATE.currentK?'◀ selected':'');
+    return `<tr class="${cls}"><td>${c.k}</td><td>${c.boxes.map(b=>b.name).join(', ')}</td>
+            <td>${c.covered}/${c.packableCount}</td><td>${fmt(c.cost)}</td><td>${tag}</td></tr>`;
+  }).join('');
+
+  // usage table
+  const usage={};
+  for(const o of orders){
+    const a=STATE.currentAssign[o.id]; if(!a) continue;
+    const u=usage[a.box.name]||(usage[a.box.name]={box:a.box,count:0,cost:0,fill:0});
+    u.count++; u.cost+=a.cost; u.fill+=Math.min(orderVolume(o)/volume(a.box),1);
+  }
+  document.querySelector('#usageTable tbody').innerHTML = Object.values(usage)
+    .sort((a,b)=>b.count-a.count).map(u=>
+    `<tr><td>${u.box.name}</td><td>${dims(u.box)}</td><td>${u.count}</td>
+     <td>${Math.round(u.fill/u.count*100)}%</td><td>${fmt(u.cost)}</td></tr>`).join('')
+    || '<tr><td colspan="5" class="muted">No orders covered with this selection.</td></tr>';
+
+  // order selector
+  const sel=document.getElementById('orderSelect');
+  const prev=sel.value;
+  sel.innerHTML=orders.map(o=>`<option value="${o.id}">${o.id} — ${orderUnits(o)} item(s)</option>`).join('');
+  if([...sel.options].some(op=>op.value===prev)) sel.value=prev;
+  renderOrder(sel.value);
+
+  // k selector options
+  const kSel=document.getElementById('kSelect');
+  const maxK=Math.min(10, STATE.ordered.length);
+  if(kSel.dataset.max!=String(maxK)){
+    kSel.innerHTML='';
+    for(let k=1;k<=maxK;k++) kSel.add(new Option(String(k),String(k)));
+    kSel.dataset.max=String(maxK);
+  }
+  kSel.value=String(STATE.currentK);
+}
+
+/* =======================================================================
+   3D viewer
+   ======================================================================= */
+let renderer, scene, camera, controls, group, viewerReady=false;
+const SKU_COLORS={};
+function colorFor(sku){
+  if(SKU_COLORS[sku]) return SKU_COLORS[sku];
+  let h=0; for(const c of sku) h=(h*31+c.charCodeAt(0))%360;
+  const col=new THREE.Color().setHSL(h/360,0.6,0.55);
+  SKU_COLORS[sku]=col; return col;
+}
+
+function initViewer(){
+  const el=document.getElementById('viewer');
+  renderer=new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(el.clientWidth, el.clientHeight);
+  el.appendChild(renderer.domElement);
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(45, el.clientWidth/el.clientHeight, 0.1, 5000);
+  controls=new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping=true;
+  scene.add(new THREE.AmbientLight(0xffffff,0.75));
+  const d=new THREE.DirectionalLight(0xffffff,0.8); d.position.set(1,2,1.5); scene.add(d);
+  const d2=new THREE.DirectionalLight(0x88aaff,0.35); d2.position.set(-1,-0.5,-1); scene.add(d2);
+  group=new THREE.Group(); scene.add(group);
+  viewerReady=true;
+  window.addEventListener('resize', onResize);
+  (function loop(){ requestAnimationFrame(loop); controls.update(); renderer.render(scene,camera); })();
+}
+function onResize(){
+  const el=document.getElementById('viewer');
+  if(!viewerReady) return;
+  camera.aspect=el.clientWidth/el.clientHeight; camera.updateProjectionMatrix();
+  renderer.setSize(el.clientWidth, el.clientHeight);
+}
+
+/* Illustrative shelf/layer placement of unit items inside the box. */
+function layout(order, box){
+  const units=[];
+  for(const l of order.lines) for(let i=0;i<l.qty;i++) units.push(l.item);
+  units.sort((a,b)=>volume(b)-volume(a));
+  let cx=0,cy=0,cz=0,rowDepth=0,layerH=0;
+  const placed=[];
+  for(const it of units){
+    const d=[it.l,it.w,it.h].sort((a,b)=>b-a); // longest first
+    const sx=d[0], sy=d[1], sz=d[2];           // lay flat: longest along X, shortest up
+    if(cx+sx > box.l+1e-6){ cx=0; cy+=rowDepth; rowDepth=0; }
+    if(cy+sy > box.w+1e-6){ cy=0; cz+=layerH; layerH=0; }
+    placed.push({it,x:cx,y:cy,z:cz,sx,sy,sz});
+    cx+=sx; rowDepth=Math.max(rowDepth,sy); layerH=Math.max(layerH,sz);
+  }
+  return placed;
+}
+
+function renderOrder(orderId){
+  const order=STATE.orders.find(o=>o.id===orderId);
+  if(!order){
+    if(viewerReady) while(group.children.length) group.remove(group.children[0]);
+    document.getElementById('orderDetail').textContent='';
+    document.getElementById('legend').innerHTML='';
+    return;
+  }
+  drawScene(order, STATE.currentAssign[order.id], {
+    prefix: `Order <b>${order.id}</b> → `,
+    noFit: `Order <b>${order.id}</b> doesn't fit any box in the current selection (${STATE.currentK} size${STATE.currentK>1?'s':''}). Try increasing the box count, or it may need splitting.`,
+  });
+}
+
+/* Draw any order + (optional) box assignment into the shared 3D viewer. */
+function drawScene(order, a, opts={}){
+  if(!viewerReady) initViewer();
+  while(group.children.length) group.remove(group.children[0]);
+  const detail=document.getElementById('orderDetail');
+  const legend=document.getElementById('legend');
+
+  // legend (per distinct sku)
+  legend.innerHTML = order.lines.map(l=>{
+    const c=colorFor(l.item.sku);
+    return `<span><span class="sw" style="background:#${c.getHexString()}"></span>${l.item.name}${l.qty>1?` ×${l.qty}`:''}</span>`;
+  }).join('');
+
+  if(!a){
+    detail.innerHTML=`<div class="alert warn" style="margin:0;">${opts.noFit||"This order doesn't fit any available box — it may need a larger box or splitting into multiple parcels."}</div>`;
+    drawLoose(order); // still show the items floating without a box
+    return;
+  }
+  const box=a.box;
+  const fill=Math.min(orderVolume(order)/volume(box),1);
+  detail.innerHTML=`${opts.prefix||''}<b>${box.name}</b> (${dims(box)} cm) ·
+    ${orderUnits(order)} item(s) · ${orderWeight(order).toFixed(2)} kg ·
+    billable <b>${a.billable.toFixed(2)} kg</b> · fill <b>${Math.round(fill*100)}%</b> · <b>${fmt(a.cost)}</b>`;
+
+  // transparent box
+  const boxGeo=new THREE.BoxGeometry(box.l, box.h, box.w);
+  const boxMat=new THREE.MeshBasicMaterial({color:0x9ec1ff, transparent:true, opacity:0.06,
+     side:THREE.DoubleSide, depthWrite:false});
+  const boxMesh=new THREE.Mesh(boxGeo, boxMat);
+  boxMesh.position.set(box.l/2, box.h/2, box.w/2);
+  group.add(boxMesh);
+  const edges=new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo),
+     new THREE.LineBasicMaterial({color:0x9ec1ff, transparent:true, opacity:0.55}));
+  edges.position.copy(boxMesh.position); group.add(edges);
+
+  // items
+  for(const p of layout(order, box)){
+    const g=new THREE.BoxGeometry(p.sx, p.sz, p.sy); // map: x=length, y=height(up), z=width
+    const c=colorFor(p.it.sku);
+    const m=new THREE.Mesh(g, new THREE.MeshLambertMaterial({color:c, transparent:true, opacity:0.92}));
+    m.position.set(p.x+p.sx/2, p.z+p.sz/2, p.y+p.sy/2);
+    group.add(m);
+    group.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),
+      new THREE.LineBasicMaterial({color:0x0a0e18, transparent:true, opacity:0.35}))).position.copy(m.position);
+  }
+  frameGroup(box.l, box.h, box.w);
+}
+
+function drawLoose(order){
+  // show the items packed against origin even without a chosen box
+  let maxX=0,maxY=0,maxZ=0;
+  const fakeBox={l:1e6,w:1e6,h:1e6};
+  for(const p of layout(order, fakeBox)){
+    const g=new THREE.BoxGeometry(p.sx,p.sz,p.sy);
+    const c=colorFor(p.it.sku);
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:c,transparent:true,opacity:0.9}));
+    m.position.set(p.x+p.sx/2,p.z+p.sz/2,p.y+p.sy/2); group.add(m);
+    maxX=Math.max(maxX,p.x+p.sx); maxY=Math.max(maxY,p.y+p.sy); maxZ=Math.max(maxZ,p.z+p.sz);
+  }
+  frameGroup(maxX||30,maxZ||30,maxY||30);
+}
+
+function frameGroup(L,Hh,W){
+  group.position.set(-L/2, -Hh/2, -W/2); // center
+  const r=Math.max(L,Hh,W);
+  camera.position.set(r*1.4, r*1.1, r*1.6);
+  camera.lookAt(0,0,0); controls.target.set(0,0,0); controls.update();
+}
+
+/* =======================================================================
+   Sandbox: build & test a custom order
+   ======================================================================= */
+let SB = [];  // [{sku, qty}]
+
+function populateSandbox(){
+  const sel=document.getElementById('sbItem');
+  sel.innerHTML=(STATE.items||[]).map(it=>
+    `<option value="${it.sku}">${it.name} (${Math.round(it.l)}×${Math.round(it.w)}×${Math.round(it.h)} cm, ${it.weight.toFixed(2)} kg)</option>`).join('');
+  renderSbList();
+}
+
+function renderSbList(){
+  const el=document.getElementById('sbList');
+  if(!SB.length){ el.innerHTML='<span class="muted">No items yet — add some, or hit 🎲 Random order.</span>'; return; }
+  el.innerHTML='<div class="chips">'+SB.map((row,i)=>{
+    const it=STATE.itemsBySku[row.sku];
+    const c=colorFor(row.sku);
+    return `<span class="chip" style="flex-direction:row;align-items:center;gap:8px;">
+      <span class="sw" style="background:#${c.getHexString()}"></span>
+      ${it?it.name:row.sku} ×${row.qty}
+      <button data-i="${i}" class="sb-del" style="background:none;border:0;color:#ff8a8a;cursor:pointer;font-size:1rem;">×</button>
+    </span>`;
+  }).join('')+'</div>';
+  el.querySelectorAll('.sb-del').forEach(b=>b.addEventListener('click',e=>{
+    SB.splice(parseInt(e.target.dataset.i,10),1); renderSbList();
+  }));
+}
+
+function sbAddCurrent(){
+  const sku=document.getElementById('sbItem').value;
+  const qty=Math.max(1, Math.round(parseFloat(document.getElementById('sbQty').value)||1));
+  if(!sku) return;
+  const ex=SB.find(r=>r.sku===sku);
+  if(ex) ex.qty+=qty; else SB.push({sku, qty});
+  renderSbList();
+}
+
+function sbRandomize(){
+  const items=STATE.items||[];
+  if(!items.length) return;
+  SB=[];
+  const n=1+Math.floor(Math.random()*4);           // 1–4 distinct items
+  const pool=[...items];
+  for(let i=0;i<n && pool.length;i++){
+    const idx=Math.floor(Math.random()*pool.length);
+    const it=pool.splice(idx,1)[0];
+    SB.push({sku:it.sku, qty:1+Math.floor(Math.random()*3)}); // qty 1–3
+  }
+  renderSbList();
+  sbPack();
+}
+
+function sbPack(){
+  const res=document.getElementById('sbResult');
+  if(!SB.length){ res.innerHTML='<span class="muted">Add at least one item first.</span>'; return; }
+  // Build a temporary order from the current selection.
+  const order={ id:'TEST', lines: SB.map(r=>({item:STATE.itemsBySku[r.sku], qty:r.qty})) };
+  // Pack against the FULL candidate box catalogue so you always see the best fit.
+  const a=assignBox(order, STATE.boxes, STATE.S);
+  drawScene(order, a, {
+    prefix:'Your test order → ',
+    noFit:'This test order fits no single box in your catalogue — it would need a bigger box or splitting into multiple parcels.',
+  });
+  if(a){
+    const fill=Math.min(orderVolume(order)/volume(a.box),1);
+    res.innerHTML=`Best box: <b>${a.box.name}</b> (${dims(a.box)} cm) · ${orderUnits(order)} item(s) ·
+      ${orderWeight(order).toFixed(2)} kg · billable <b>${a.billable.toFixed(2)} kg</b> ·
+      fill <b>${Math.round(fill*100)}%</b> · est. <b>${fmt(a.cost)}</b>`;
+  } else {
+    res.innerHTML=`<span style="color:#ff8a8a;">No single box fits this order.</span>`;
+  }
+  document.getElementById('viewer').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+/* =======================================================================
+   Wiring
+   ======================================================================= */
+function readFile(input){
+  return new Promise(res=>{
+    const f=input.files[0]; if(!f){res(null);return;}
+    const r=new FileReader(); r.onload=()=>res(r.result); r.readAsText(f);
+  });
+}
+
+document.getElementById('orderSelect').addEventListener('change', e=>renderOrder(e.target.value));
+document.getElementById('kSelect').addEventListener('change', e=>selectK(parseInt(e.target.value,10)));
+document.getElementById('loadSample').addEventListener('click', ()=>{
+  document.getElementById('currency').value='$';
+  try{ analyze(SAMPLE_ORDERS, SAMPLE_PRODUCTS, SAMPLE_BOXES); }catch(err){ alert(err.message); }
+});
+document.getElementById('applySettings').addEventListener('click', ()=>{
+  runWithCurrentInputs();
+});
+document.getElementById('runUpload').addEventListener('click', runWithCurrentInputs);
+document.getElementById('sbAdd').addEventListener('click', sbAddCurrent);
+document.getElementById('sbRandom').addEventListener('click', sbRandomize);
+document.getElementById('sbClear').addEventListener('click', ()=>{ SB=[]; renderSbList(); document.getElementById('sbResult').innerHTML=''; });
+document.getElementById('sbPack').addEventListener('click', sbPack);
+
+let LAST={orders:SAMPLE_ORDERS, products:SAMPLE_PRODUCTS, boxes:SAMPLE_BOXES};
+async function runWithCurrentInputs(){
+  try{
+    const o=await readFile(document.getElementById('ordersFile'));
+    const p=await readFile(document.getElementById('productsFile'));
+    const b=await readFile(document.getElementById('boxesFile'));
+    if(o!==null) LAST.orders=o;
+    if(p!==null) LAST.products=p;
+    if(b!==null) LAST.boxes=b;
+    const products = (p!==null)?p:(o!==null?null:LAST.products);
+    const boxes = (b!==null)?b:(o!==null?null:LAST.boxes);
+    analyze(LAST.orders, products, boxes);
+  }catch(err){ alert(err.message); }
+}
+
+// Auto-load sample data on open.
+window.addEventListener('DOMContentLoaded', ()=>{
+  initViewer();
+  try{ analyze(SAMPLE_ORDERS, SAMPLE_PRODUCTS, SAMPLE_BOXES); }
+  catch(err){ document.getElementById('warnings').innerHTML=`<div class="alert warn">${err.message}</div>`; }
+});
+</script>
+</body>
+</html>
